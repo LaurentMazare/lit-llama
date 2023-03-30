@@ -137,8 +137,6 @@ def generate_response(model, instruction):
     return output # output.split("### Response:")[1].strip()
 
 
-example_outputs = []
-
 @torch.no_grad()
 def validate(fabric: L.Fabric, model: torch.nn.Module, val_data: np.ndarray) -> torch.Tensor:
     fabric.print("Validating ...")
