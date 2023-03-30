@@ -60,12 +60,8 @@ def main():
     model.load_state_dict(checkpoint, strict=False) 
     mark_only_lora_as_trainable(model)
 
-    # TODO: make bnb work
-    # optimizer = bnb.optim.AdamW8bit(model.parameters(), lr=learning_rate)
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
-
     model, optimizer = fabric.setup(model, optimizer)
-
     train(fabric, model, optimizer, train_data, val_data)
 
 
@@ -162,14 +158,8 @@ def validate(fabric: L.Fabric, model: torch.nn.Module, val_data: np.ndarray) -> 
     fabric.print(instruction)
     fabric.print(output)
 
-    columns = ["instruction", "output"]
-    example_outputs.append([instruction, output])
-    metrics = {"examples": wandb.Table(columns=columns, data=example_outputs)}
-    wandb.log(metrics)
-
     model.train()
     return out.item()
-
 
 def loss_fn(logits, targets):
     # shift the targets such that output n predicts token n+1
