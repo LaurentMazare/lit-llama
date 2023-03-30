@@ -136,7 +136,8 @@ def main(
         print(tokenizer.decode(y))
 
     t = time.perf_counter() - t0
-    print(f"\n\nTime for inference: {t:.02f} sec total, {num_samples * max_new_tokens / t:.02f} tokens/sec", file=sys.stderr)
+    print(f"\n\nTime for inference: {t:.02f} sec total, {num_samples * max_new_tokens / t:.02f} tokens/sec",
+          file=sys.stderr)
     print(f"Memory used: {torch.cuda.max_memory_reserved() / 1e9:.02f} GB", file=sys.stderr)
 
 

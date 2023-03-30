@@ -12,7 +12,8 @@ warnings.filterwarnings(
 )
 warnings.filterwarnings(
     "ignore", 
-    message="The installed version of bitsandbytes was compiled without GPU support. 8-bit optimizers and GPU quantization are unavailable."
+    message="The installed version of bitsandbytes was compiled without GPU support."
+            " The 8-bit optimizers and GPU quantization are unavailable."
 )
 import bitsandbytes as bnb  # noqa: E402
 
