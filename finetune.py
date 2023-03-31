@@ -14,8 +14,6 @@ from lit_llama.model import LLaMA, LLaMAConfig
 from lit_llama.tokenizer import Tokenizer
 from scripts.prepare_alpaca import generate_prompt
 
-import wandb
-
 
 out_dir = "out/alpaca-lora"
 eval_interval = 20
@@ -38,8 +36,6 @@ warmup_steps = 100
 
 
 def main():
-    wandb.init(project="alpaca-lora")
-
     fabric = L.Fabric(accelerator="cuda", devices=1)
     fabric.seed_everything(1337 + fabric.global_rank)
 
@@ -102,7 +98,6 @@ def train(
                 
             if step_count % eval_interval == 0:
                 val_loss = validate(fabric, model, val_data)
-                wandb.log({"val_loss": val_loss}, commit=False)
                 fabric.print(f"step {iter_num}: val loss {val_loss:.4f}")
                 fabric.barrier()
 
@@ -115,7 +110,6 @@ def train(
 
         dt = time.time() - t0
         if iter_num % log_interval == 0:
-            wandb.log({"train_loss": loss.item(), "step": step_count})
             fabric.print(f"iter {iter_num}: loss {loss.item():.4f}, time: {dt*1000:.2f}ms")
 
 
