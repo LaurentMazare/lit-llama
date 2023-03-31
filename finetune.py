@@ -111,7 +111,7 @@ def train(
                 # We are only saving the LoRA weights
                 # TODO: Provide a function/script to merge the LoRA weights with pretrained weights
                 checkpoint = lora_state_dict(model)
-                fabric.save(checkpoint, os.path.join(out_dir, f"iter-{iter_num:06d}-ckpt.pt"))
+                fabric.save(os.path.join(out_dir, f"iter-{iter_num:06d}-ckpt.pt"), checkpoint)
 
         dt = time.time() - t0
         if iter_num % log_interval == 0:
