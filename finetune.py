@@ -9,7 +9,7 @@ import numpy as np
 import torch
 
 from generate import generate
-from lit_llama.lora import mark_only_lora_as_trainable, with_lora, lora_state_dict
+from lit_llama.lora import mark_only_lora_as_trainable, lora, lora_state_dict
 from lit_llama.model import LLaMA, LLaMAConfig
 from lit_llama.tokenizer import Tokenizer
 from scripts.prepare_alpaca import generate_prompt
@@ -17,7 +17,7 @@ from scripts.prepare_alpaca import generate_prompt
 import wandb
 
 
-out_dir = "out/alpaca-lora-fixes"
+out_dir = "out/alpaca-lora"
 eval_interval = 20
 save_interval = 20
 eval_iters = 100
@@ -51,7 +51,7 @@ def main():
     config = LLaMAConfig.from_name("7B")
     config.block_size = block_size
 
-    with with_lora(r=lora_r, alpha=lora_alpha, dropout=lora_dropout, enabled=True):
+    with lora(r=lora_r, alpha=lora_alpha, dropout=lora_dropout, enabled=True):
         model = LLaMA(config)
 
     checkpoint = torch.load("checkpoints/lit-llama/7B/state_dict.pth")
