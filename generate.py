@@ -6,7 +6,7 @@ from typing import Optional
 import lightning as L
 import torch
 
-from lit_llama import LLaMA, Tokenizer, as_8_bit_quantized
+from lit_llama import LLaMA, LLaMAConfig, Tokenizer, as_8_bit_quantized
 
 
 @torch.no_grad()
@@ -105,7 +105,13 @@ def main(
     with as_8_bit_quantized(fabric.device, enabled=quantize):
         print("Loading model ...", file=sys.stderr)
         t0 = time.time()
-        model = LLaMA.from_name(model_size)
+        config = LLaMAConfig.from_name("300M")
+        config.block_size = 1024
+        config.vocab_size = 100  # from prepare_shakespeare.py
+ 
+        # model = LLaMA.from_name(model_size)
+        model = LLaMA(config)
+
         checkpoint = torch.load(checkpoint_path)
         model.load_state_dict(checkpoint)
         print(f"Time to load model: {time.time() - t0:.02f} seconds.", file=sys.stderr)

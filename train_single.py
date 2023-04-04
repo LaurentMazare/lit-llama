@@ -9,7 +9,6 @@ from functools import partial
 from typing import Tuple
 
 import lightning as L
-from lightning.fabric.strategies import FSDPStrategy
 
 import torch
 from torch.distributed.fsdp.wrap import transformer_auto_wrap_policy
@@ -41,9 +40,7 @@ block_size = 1024
 
 def main() -> None:
     auto_wrap_policy = partial(transformer_auto_wrap_policy, transformer_layer_cls={Block})
-    strategy = FSDPStrategy(auto_wrap_policy=auto_wrap_policy, activation_checkpointing=Block)
 
-    # fabric = L.Fabric(accelerator="cuda", devices=4, precision="bf16-mixed", strategy=strategy)
     fabric = L.Fabric(accelerator="cuda", devices=1, precision="bf16-mixed")
     fabric.launch()
     fabric.seed_everything(1337 + fabric.global_rank)

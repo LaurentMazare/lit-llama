@@ -84,6 +84,7 @@ class LLaMAConfig:
 
 
 llama_configs = {
+    "300M": LLaMAConfig(n_layer=24, n_head=16, n_embd=1024),
     "7B": LLaMAConfig(n_layer=32, n_head=32, n_embd=4096),
     "13B": LLaMAConfig(n_layer=40, n_head=40, n_embd=5120),
     "30B": LLaMAConfig(n_layer=60, n_head=52, n_embd=6656),
