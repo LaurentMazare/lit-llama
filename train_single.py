@@ -18,30 +18,28 @@ import numpy as np
 from lit_llama.model import Block, LLaMA, LLaMAConfig
 
 out_dir = "out"
-eval_interval = 2000
-eval_iters = 200
+eval_interval = 1000
+eval_iters = 100
 log_interval = 1
 # compilation fails as it does not support torch.complex64 for RoPE
 # compile = False
 
 # Hyperparameters
 learning_rate = 6e-4
-batch_size = 100
-micro_batch_size = 10
+batch_size = 25
+micro_batch_size = 5
 max_iters = 600000
 weight_decay = 1e-1
 beta1 = 0.9
 beta2 = 0.95
 grad_clip = 1.0
 
-# For shakespeare, choose smaller block size than vanilla LLaMA
-block_size = 1024
-
 
 def main() -> None:
     auto_wrap_policy = partial(transformer_auto_wrap_policy, transformer_layer_cls={Block})
 
-    fabric = L.Fabric(accelerator="cuda", devices=1, precision="bf16-mixed")
+    # fabric = L.Fabric(accelerator="cuda", devices=1, precision="bf16-mixed")
+    fabric = L.Fabric()
     fabric.launch()
     fabric.seed_everything(1337 + fabric.global_rank)
 
@@ -50,8 +48,7 @@ def main() -> None:
 
     train_data, val_data = load_datasets()
 
-    config = LLaMAConfig.from_name("300M")
-    config.block_size = block_size
+    config = LLaMAConfig.from_name("30M")
     config.vocab_size = 100  # from prepare_shakespeare.py
     
     with fabric.device:
@@ -161,7 +158,9 @@ def get_batch(fabric: L.Fabric, data: np.ndarray, batch_size: int, block_size: i
     ix = torch.randint(len(data) - block_size, (batch_size,))
     x = torch.stack([torch.from_numpy((data[i : i + block_size]).astype(np.int64)) for i in ix])
     y = torch.stack([torch.from_numpy((data[i + 1 : i + 1 + block_size]).astype(np.int64)) for i in ix])
-    x, y = fabric.to_device((x.pin_memory(), y.pin_memory()))
+    if fabric.device.type == "cuda":
+        x.pin_memory(), y.pin_memory()
+    x, y = fabric.to_device((x, y))
     return x, y
 
 
@@ -172,5 +171,5 @@ def load_datasets(data_dir: str = "data/shakespeare") -> Tuple[np.ndarray, np.nd
 
 
 if __name__ == "__main__":
-    torch.set_float32_matmul_precision("high")
+    # torch.set_float32_matmul_precision("high")
     main()
