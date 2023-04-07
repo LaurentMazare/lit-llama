@@ -20,7 +20,7 @@ from lit_llama.model import Block, LLaMA, LLaMAConfig
 out_dir = "out"
 
 n_peers = 2
-reduce_interval = 5
+reduce_interval = 100
 
 eval_interval = 200
 eval_iters = 100
@@ -76,7 +76,7 @@ def main_single() -> None:
     logger.finalize("success")
 
 
-def copy_params(src, dst, weight=1.0, accumulate=True):
+def copy_params(src, dst, weight=1.0, accumulate=False):
     src_state = src.state_dict()
     dst_state = dst.state_dict()
 
@@ -84,7 +84,7 @@ def copy_params(src, dst, weight=1.0, accumulate=True):
         if accumulate:
             dst_state[k] += weight * src_state[k]
         else:
-            dst_state[k] = weight * src_state[k]
+            dst_state[k].copy_(weight * src_state[k])
 
 
 def avg_params(srcs, dst):
@@ -100,7 +100,7 @@ def avg_params(srcs, dst):
 def main_peer() -> None:
     logger = TensorBoardLogger("logs", name="lit-llama")
 
-    fabric = L.Fabric(accelerator="auto", loggers=logger)
+    fabric = L.Fabric(accelerator="auto", devices=1, loggers=logger)
     fabric.launch()
     fabric.seed_everything(1337 + fabric.global_rank)
 
@@ -114,41 +114,48 @@ def main_peer() -> None:
     
     with fabric.device:
         avg_model = LLaMA(config)
+        target_model = LLaMA(config)
 
     n_params = sum(p.numel() for p in avg_model.parameters())
     print(f"N parameters: {n_params * 1e-9:.3f}B")
 
     avg_model = fabric.setup_module(avg_model)
+    target_model = fabric.setup_module(target_model)
 
     avg_model.apply(avg_model._init_weights)
 
-    weight = 1 / n_peers
+    weight = 1.0 / n_peers
 
     iter_num = 0
+
+    models = []
+    optimizers = []
+    for n in range(n_peers):
+        with fabric.device:
+            model = LLaMA(config)
+        model = fabric.setup_module(model)
+        models.append(model)
+
+        optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=weight_decay, betas=(beta1, beta2))
+        optimizer = fabric.setup_optimizers(optimizer)
+        optimizers.append(optimizer)
 
     while True:
         for n in range(n_peers):
             # TODO: partition train_data
-
-            with fabric.device:
-                model = LLaMA(config)
  
             with torch.no_grad():
-                copy_params(avg_model, model)
+                copy_params(avg_model, models[n], accumulate=False)
 
-            model = fabric.setup_module(model)
-
-            optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=weight_decay, betas=(beta1, beta2))
-            optimizer = fabric.setup_optimizers(optimizer)
-
-            train_peer(fabric, model, optimizer, n, iter_num, reduce_interval, train_data)
+            train_peer(fabric, models[n], optimizers[n], n, iter_num, reduce_interval, train_data)
  
             with torch.no_grad():
                 if n == 0:
-                    copy_params(model, avg_model, weight=weight, accumulate=False)
+                    copy_params(models[n], target_model, weight=weight, accumulate=False)
                 else:
-                    pass
-                    # copy_params(model, avg_model, weight=weight, accumulate=True)
+                    copy_params(models[n], target_model, weight=weight, accumulate=True)
+
+        copy_params(target_model, avg_model, accumulate=False)
 
         iter_num += reduce_interval
 
@@ -235,7 +242,7 @@ def train_peer(
 ) -> None:
     assert batch_size % micro_batch_size == 0, f"batch_size ({batch_size}) is not a multiple of micro_batch_size ({micro_batch_size})"
 
-    grad_accumulation_steps = batch_size // micro_batch_size
+    grad_accumulation_steps = batch_size // micro_batch_size // n_peers
 
     iter_num = start_iter
 
@@ -315,6 +322,6 @@ def load_datasets(data_dir: str = "data/shakespeare") -> Tuple[np.ndarray, np.nd
 
 
 if __name__ == "__main__":
-    # torch.set_float32_matmul_precision("high")
+    torch.set_float32_matmul_precision("high")
     # main_single()
     main_peer()
