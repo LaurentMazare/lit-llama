@@ -58,7 +58,7 @@ def avg_params(srcs, dst):
 
 
 def main(agg_interval: int) -> None:
-    logger = CSVLogger("logs", name=f"lit-llama_agg")
+    logger = CSVLogger("logs", name=f"lit-llama_agg", flush_logs_every_n_steps=1)
 
     fabric = L.Fabric(accelerator="auto", devices=1, loggers=logger)
     fabric.launch()

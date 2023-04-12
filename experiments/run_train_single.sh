@@ -1,2 +1,2 @@
-CUDA_VISIBLE_DEVICES=0 python train_single.py --batch_size 100
+CUDA_VISIBLE_DEVICES=0 python experiments/train_single.py --batch_size 100
 

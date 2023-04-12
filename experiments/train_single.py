@@ -29,9 +29,8 @@ log_interval = 10
 
 # Hyperparameters
 learning_rate = 6e-4
-batch_size = 25
 micro_batch_size = 5
-max_iters = 600000
+max_iters = 10000
 weight_decay = 1e-1
 beta1 = 0.9
 beta2 = 0.95
@@ -39,7 +38,7 @@ grad_clip = 1.0
 
 
 def main(batch_size: int = 25) -> None:
-    logger = CSVLogger("logs", name=f"lit-llama_single")
+    logger = CSVLogger("logs", name=f"lit-llama_single", flush_logs_every_n_steps=1)
 
     fabric = L.Fabric(accelerator="auto", devices=1, loggers=logger)
     fabric.launch()
