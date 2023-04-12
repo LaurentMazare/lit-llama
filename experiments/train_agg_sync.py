@@ -4,8 +4,14 @@ Currently, it just trains on the Shakespeare dataset.
 """
 
 import os
+from pathlib import Path
+import sys
 import time
 from typing import Tuple
+
+# support running without installing as a package
+wd = Path(__file__).parent.parent.resolve()
+sys.path.append(str(wd))
 
 import torch
 import numpy as np
