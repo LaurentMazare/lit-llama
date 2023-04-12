@@ -36,7 +36,7 @@ beta2 = 0.95
 grad_clip = 1.0
 
 
-def main(peer_id: int, agg_interval: int, batch_size: int=25) -> None:
+def main(peer_id: int=-1, agg_interval: int=100, batch_size: int=25) -> None:
     logger = CSVLogger("logs", name=f"lit-llama_{peer_id}", flush_logs_every_n_steps=1)
 
     peer_file_path = os.path.join(out_dir, f"peer_{peer_id:04d}")
@@ -70,6 +70,7 @@ def main(peer_id: int, agg_interval: int, batch_size: int=25) -> None:
 
     while True:
         expected_checkpoint = os.path.join(out_dir, f"checkpoint_agg_iter{agg_iter_num:04d}.ckpt")
+        print(f"Expecting {expected_checkpoint}")
         while True:
             if os.path.exists(expected_checkpoint):
                 break
@@ -85,7 +86,9 @@ def main(peer_id: int, agg_interval: int, batch_size: int=25) -> None:
         # TODO: Save with Fabric
         print(f"Saving checkpoint to {out_dir}")
         peer_checkpoint = f"checkpoint_peer{peer_id:02d}_iter{agg_iter_num:04d}.ckpt"
-        torch.save(model.state_dict(), os.path.join(out_dir, peer_checkpoint))
+        peer_checkpoint_tmp = f"_{peer_checkpoint}"
+        torch.save(model.state_dict(), os.path.join(out_dir, peer_checkpoint_tmp))
+        os.rename(os.path.join(out_dir, peer_checkpoint_tmp), os.path.join(out_dir, peer_checkpoint))
 
         val_loss = validate(fabric, model, val_data)
         fabric.logger.log_metrics({"val_loss": val_loss.item()}, iter_num)

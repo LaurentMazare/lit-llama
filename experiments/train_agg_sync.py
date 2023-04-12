@@ -57,7 +57,7 @@ def avg_params(srcs, dst):
         copy_params(src, dst, weight=weight, accumulate=True)
 
 
-def main(agg_interval: int) -> None:
+def main(agg_interval: int=100) -> None:
     logger = CSVLogger("logs", name=f"lit-llama_agg", flush_logs_every_n_steps=1)
 
     fabric = L.Fabric(accelerator="auto", devices=1, loggers=logger)
@@ -85,7 +85,9 @@ def main(agg_interval: int) -> None:
     agg_iter_num = 0
 
     agg_checkpoint = f"checkpoint_agg_iter{agg_iter_num:04d}.ckpt"
-    torch.save(agg_model.state_dict(), os.path.join(out_dir, agg_checkpoint))
+    agg_checkpoint_tmp = f"_{agg_checkpoint}"
+    torch.save(agg_model.state_dict(), os.path.join(out_dir, agg_checkpoint_tmp))
+    os.rename(os.path.join(out_dir, agg_checkpoint_tmp), os.path.join(out_dir, agg_checkpoint))
 
     time.sleep(10.0)
 
@@ -101,6 +103,7 @@ def main(agg_interval: int) -> None:
 
         for n, peer_id in enumerate(peers):
             expected_checkpoint = os.path.join(out_dir, f"checkpoint_peer{peer_id:02d}_iter{agg_iter_num:04d}.ckpt")
+            print(f"Expecting {expected_checkpoint} for aggregation")
             while True:
                 if os.path.exists(expected_checkpoint):
                     break
@@ -114,18 +117,25 @@ def main(agg_interval: int) -> None:
                 else:
                     copy_params(peer_model, agg_model, weight=weight, accumulate=True)
 
+                os.remove(expected_checkpoint)
+
         iter_num = agg_iter_num * agg_interval
 
+        agg_iter_num += 1
+
         # TODO: Save with Fabric
-        print(f"Saving checkpoint to {out_dir}")
         agg_checkpoint = f"checkpoint_agg_iter{agg_iter_num:04d}.ckpt"
-        torch.save(agg_model.state_dict(), os.path.join(out_dir, agg_checkpoint))
+        agg_checkpoint_tmp = f"_{agg_checkpoint}"
+        print(f"Saving checkpoint to {agg_checkpoint}")
+        torch.save(agg_model.state_dict(), os.path.join(out_dir, agg_checkpoint_tmp))
+        os.rename(os.path.join(out_dir, agg_checkpoint_tmp), os.path.join(out_dir, agg_checkpoint))
+
+        prev_agg_checkpoint = f"checkpoint_agg_iter{agg_iter_num-1:04d}.ckpt"
+        os.remove(os.path.join(out_dir, prev_agg_checkpoint))
 
         val_loss = validate(fabric, agg_model, val_data)
         fabric.logger.log_metrics({"val_loss": val_loss.item()}, iter_num)
         fabric.print(f"step {iter_num}: val loss {val_loss:.4f}")
-
-        agg_iter_num += 1
 
         if agg_iter_num * agg_interval > max_iters:
             break

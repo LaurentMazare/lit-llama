@@ -131,6 +131,9 @@ def train(
 
         iter_num += 1
 
+        if iter_num > max_iters:
+            break
+
 
 @torch.no_grad()
 def validate(fabric: L.Fabric, model: torch.nn.Module, val_data: np.ndarray) -> torch.Tensor:
