@@ -29,7 +29,7 @@ log_interval = 10
 # Hyperparameters
 learning_rate = 6e-4
 micro_batch_size = 5
-max_iters = 2000
+max_iters = 20000 // 4
 weight_decay = 1e-1
 beta1 = 0.9
 beta2 = 0.95
@@ -57,8 +57,8 @@ def avg_params(srcs, dst):
         copy_params(src, dst, weight=weight, accumulate=True)
 
 
-def main(agg_interval: int=100) -> None:
-    logger = CSVLogger("logs", name=f"lit-llama_agg", flush_logs_every_n_steps=1)
+def main(logs_dir: str = "logs", agg_interval: int=100) -> None:
+    logger = CSVLogger(logs_dir, name=f"lit-llama_agg", flush_logs_every_n_steps=1)
 
     fabric = L.Fabric(accelerator="auto", devices=1, loggers=logger)
     fabric.launch()

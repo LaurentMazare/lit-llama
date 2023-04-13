@@ -29,15 +29,15 @@ log_interval = 10
 # Hyperparameters
 learning_rate = 6e-4
 micro_batch_size = 5
-max_iters = 10000
+max_iters = 20000 // 4
 weight_decay = 1e-1
 beta1 = 0.9
 beta2 = 0.95
 grad_clip = 1.0
 
 
-def main(peer_id: int=-1, agg_interval: int=100, batch_size: int=25) -> None:
-    logger = CSVLogger("logs", name=f"lit-llama_{peer_id}", flush_logs_every_n_steps=1)
+def main(logs_dir: str = "logs", peer_id: int = -1, agg_interval: int = 100, batch_size: int = 25) -> None:
+    logger = CSVLogger(logs_dir, name=f"lit-llama_{peer_id}", flush_logs_every_n_steps=1)
 
     peer_file_path = os.path.join(out_dir, f"peer_{peer_id:04d}")
     with open(peer_file_path, "w") as f:
@@ -154,6 +154,7 @@ def train_peer(
             optimizer.step()
             optimizer.zero_grad()
 
+        print(f"Samples seen: {iter_num * micro_batch_size}")
         iter_num += 1
 
         if iter_num - start_iter > n_iter:
